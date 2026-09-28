@@ -55,3 +55,20 @@ export interface DemoUser {
   role_name: string;
   description: string;
 }
+
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  full_name: string;
+  role_id: string;
+  designation?: string;
+  phone_number?: string;
+  state_id?: string;
+  district_id?: string;
+}
+
+export interface StatutoryRole {
+  role_id: string;
+  role_name: string;
+  description?: string;
+}

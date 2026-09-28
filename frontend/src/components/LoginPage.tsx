@@ -1,37 +1,70 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Lock, Mail, ArrowRight, UserCheck, AlertCircle, KeyRound, Building2, X } from 'lucide-react';
+import {
+  ShieldCheck,
+  Lock,
+  Mail,
+  ArrowRight,
+  UserCheck,
+  AlertCircle,
+  KeyRound,
+  Building2,
+  X,
+  UserPlus,
+  User,
+  Phone,
+  CheckCircle2,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import type { DemoUser } from '../types';
+import type { DemoUser, StatutoryRole } from '../types';
 
 interface LoginPageProps {
   onClose?: () => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
-  const { login, quickSwitch } = useAuth();
-  const [activeTab, setActiveTab] = useState<'QUICK' | 'DIRECT'>('QUICK');
+  const { login, register, quickSwitch } = useAuth();
+  const [activeTab, setActiveTab] = useState<'QUICK' | 'DIRECT' | 'REGISTER'>('QUICK');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('nlams@password2026');
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [demoUsers, setDemoUsers] = useState<DemoUser[]>([]);
+  const [roles, setRoles] = useState<StatutoryRole[]>([]);
+
+  // Registration form states
+  const [regFullName, setRegFullName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regRole, setRegRole] = useState('ROLE_CITIZEN');
+  const [regDesignation, setRegDesignation] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regState, setRegState] = useState('');
+  const [regDistrict, setRegDistrict] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
 
   useEffect(() => {
     fetch('/api/v1/auth/demo-users')
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setDemoUsers(data))
       .catch((err) => console.error('Failed to load demo users:', err));
+
+    fetch('/api/v1/auth/roles')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setRoles(data))
+      .catch((err) => console.error('Failed to load roles:', err));
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     setLoading(true);
 
-    const success = await login(email, password);
+    const ok = await login(email, password);
     setLoading(false);
 
-    if (success) {
+    if (ok) {
       if (onClose) onClose();
     } else {
       setError('Authentication failed: Please check statutory credentials.');
@@ -41,10 +74,48 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
   const handleQuickLogin = async (userEmail: string) => {
     setLoading(true);
     setError(null);
-    const success = await quickSwitch(userEmail);
+    setSuccess(null);
+    const ok = await quickSwitch(userEmail);
     setLoading(false);
-    if (success && onClose) {
+    if (ok && onClose) {
       onClose();
+    }
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (regPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (regPassword !== regConfirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+    const res = await register({
+      email: regEmail,
+      password: regPassword,
+      full_name: regFullName,
+      role_id: regRole,
+      designation: regDesignation || undefined,
+      phone_number: regPhone || undefined,
+      state_id: regState || undefined,
+      district_id: regDistrict || undefined,
+    });
+    setLoading(false);
+
+    if (res.success) {
+      setSuccess('Statutory account created successfully! Auto-signing in...');
+      setTimeout(() => {
+        if (onClose) onClose();
+      }, 700);
+    } else {
+      setError(res.error || 'Registration failed.');
     }
   };
 
@@ -53,7 +124,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
       width: '100%',
       maxWidth: '780px',
       margin: '0 auto',
-      maxHeight: 'min(580px, calc(100vh - 40px))',
+      maxHeight: 'min(620px, calc(100vh - 36px))',
       display: 'flex',
       flexDirection: 'column',
       padding: '16px 20px',
@@ -62,7 +133,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
       boxShadow: '0 10px 40px rgba(0, 0, 0, 0.6)',
       overflow: 'hidden',
     }}>
-      {/* Compact Header Banner with Close Button */}
+      {/* Header Banner with Title and Close Button */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -88,12 +159,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <h2 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>
-                Statutory Stakeholder Authentication
+                {activeTab === 'REGISTER'
+                  ? 'Create New Statutory Account'
+                  : 'Statutory Stakeholder Authentication'}
               </h2>
-              <span className="badge badge-cyan" style={{ fontSize: '9px' }}>RBAC Enforced</span>
+              <span className="badge badge-cyan" style={{ fontSize: '9px' }}>
+                {activeTab === 'REGISTER' ? 'Self-Registration' : 'RBAC Enforced'}
+              </span>
             </div>
             <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              RFCTLARR Act 2013 Multi-Tiered Access Control
+              RFCTLARR Act 2013 Multi-Tiered Access & Governance System
             </p>
           </div>
         </div>
@@ -121,7 +196,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
         )}
       </div>
 
-      {/* Mode Switcher Tabs */}
+      {/* Mode Switcher Tabs (3 Tabs) */}
       <div style={{
         display: 'flex',
         background: 'var(--bg-primary)',
@@ -132,7 +207,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
       }}>
         <button
           type="button"
-          onClick={() => setActiveTab('QUICK')}
+          onClick={() => { setActiveTab('QUICK'); setError(null); setSuccess(null); }}
           style={{
             flex: 1,
             padding: '6px 10px',
@@ -151,11 +226,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
           }}
         >
           <Building2 size={13} />
-          1-Click Role Switcher (8 Seeded Roles)
+          1-Click Demo Switcher
         </button>
+
         <button
           type="button"
-          onClick={() => setActiveTab('DIRECT')}
+          onClick={() => { setActiveTab('DIRECT'); setError(null); setSuccess(null); }}
           style={{
             flex: 1,
             padding: '6px 10px',
@@ -174,10 +250,35 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
           }}
         >
           <KeyRound size={13} />
-          Direct Email & Password Form
+          Direct Sign In
+        </button>
+
+        <button
+          type="button"
+          onClick={() => { setActiveTab('REGISTER'); setError(null); setSuccess(null); }}
+          style={{
+            flex: 1,
+            padding: '6px 10px',
+            fontSize: '12px',
+            fontWeight: 600,
+            borderRadius: 'var(--radius-sm)',
+            border: 'none',
+            cursor: 'pointer',
+            background: activeTab === 'REGISTER' ? 'var(--accent-emerald)' : 'transparent',
+            color: activeTab === 'REGISTER' ? '#FFFFFF' : 'var(--text-secondary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <UserPlus size={13} />
+          Create New Account
         </button>
       </div>
 
+      {/* Feedback Alerts */}
       {error && (
         <div style={{
           background: 'rgba(239, 68, 68, 0.15)',
@@ -193,6 +294,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
         }}>
           <AlertCircle size={15} />
           <span>{error}</span>
+        </div>
+      )}
+
+      {success && (
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.15)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          borderRadius: 'var(--radius-md)',
+          padding: '8px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          color: '#34D399',
+          fontSize: '12px',
+          flexShrink: 0,
+        }}>
+          <CheckCircle2 size={15} />
+          <span>{success}</span>
         </div>
       )}
 
@@ -272,7 +391,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
 
       {/* Tab 2: Direct Login Form */}
       {activeTab === 'DIRECT' && (
-        <form onSubmit={handleSubmit} style={{
+        <form onSubmit={handleLoginSubmit} style={{
           display: 'flex',
           flexDirection: 'column',
           gap: '10px',
@@ -282,7 +401,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
         }}>
           <div>
             <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-              Official Government Email Address
+              Official Government / Registered Email Address
             </label>
             <div style={{ position: 'relative' }}>
               <Mail size={14} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '10px' }} />
@@ -344,6 +463,288 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
           >
             {loading ? 'Authenticating...' : 'Sign In & Issue JWT Access Token'}
             <ArrowRight size={14} />
+          </button>
+        </form>
+      )}
+
+      {/* Tab 3: Register New User Account */}
+      {activeTab === 'REGISTER' && (
+        <form onSubmit={handleRegisterSubmit} style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          flex: 1,
+          overflowY: 'auto',
+          paddingRight: '4px',
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
+            {/* Full Name */}
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                Full Legal Name <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <User size={13} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '9px' }} />
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Ramesh Kumar or Smt. Anita Roy"
+                  value={regFullName}
+                  onChange={(e) => setRegFullName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px 6px 30px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-subtle)',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '12px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Email */}
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                Email Address <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Mail size={13} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '9px' }} />
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. yourname@domain.gov.in"
+                  value={regEmail}
+                  onChange={(e) => setRegEmail(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px 6px 30px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-subtle)',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '12px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Statutory Role Dropdown */}
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                Statutory Role <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <select
+                value={regRole}
+                onChange={(e) => setRegRole(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '6px 10px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  background: 'var(--bg-surface)',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '12px',
+                  outline: 'none',
+                }}
+              >
+                {roles.length > 0 ? (
+                  roles.map((r) => (
+                    <option key={r.role_id} value={r.role_id} style={{ background: '#0F172A', color: '#FFFFFF' }}>
+                      {r.role_name} ({r.role_id.replace('ROLE_', '')})
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="ROLE_CITIZEN">Project Affected Landowner / Public Citizen</option>
+                    <option value="ROLE_REQUIRING_BODY">Land Requiring Body (NHAI/Railways)</option>
+                    <option value="ROLE_FIELD_SURVEYOR">Field Surveyor / Amin</option>
+                    <option value="ROLE_LAO">Land Acquisition Officer (SDM)</option>
+                    <option value="ROLE_CALA_COLLECTOR">Competent Authority (District Collector)</option>
+                    <option value="ROLE_RR_OFFICER">R&R Commissioner</option>
+                    <option value="ROLE_STATE_OFFICER">State Nodal Officer</option>
+                    <option value="ROLE_NATIONAL_ADMIN">National Administrator</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            {/* Designation */}
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                Designation / Title (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Landowner, Survey No. 44 or Project Director"
+                value={regDesignation}
+                onChange={(e) => setRegDesignation(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '6px 10px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  background: 'var(--bg-surface)',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '12px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            {/* Phone Number */}
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                Mobile Contact (Optional)
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Phone size={13} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '9px' }} />
+                <input
+                  type="text"
+                  placeholder="+91 98765 43210"
+                  value={regPhone}
+                  onChange={(e) => setRegPhone(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px 6px 30px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-subtle)',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '12px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* State & District */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                  State Code
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. KA, MH"
+                  value={regState}
+                  onChange={(e) => setRegState(e.target.value.toUpperCase())}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-subtle)',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '12px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                  District Code
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. BENGALURU"
+                  value={regDistrict}
+                  onChange={(e) => setRegDistrict(e.target.value.toUpperCase())}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-subtle)',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '12px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                Password (min 6 characters) <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Lock size={13} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '9px' }} />
+                <input
+                  type="password"
+                  required
+                  placeholder="Create password"
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px 6px 30px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-subtle)',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '12px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                Confirm Password <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Lock size={13} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '9px' }} />
+                <input
+                  type="password"
+                  required
+                  placeholder="Confirm password"
+                  value={regConfirmPassword}
+                  onChange={(e) => setRegConfirmPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px 6px 30px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-subtle)',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '12px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn btn-primary"
+            style={{
+              marginTop: '4px',
+              padding: '8px',
+              fontSize: '12px',
+              background: 'linear-gradient(135deg, #10B981, #059669)',
+              borderColor: 'rgba(16, 185, 129, 0.4)',
+            }}
+          >
+            {loading ? 'Creating Statutory Account...' : 'Create Account & Sign In'}
+            <UserPlus size={14} />
           </button>
         </form>
       )}

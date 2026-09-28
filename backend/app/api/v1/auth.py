@@ -1,10 +1,11 @@
+import uuid
 from typing import List, Optional
 from pydantic import BaseModel, EmailStr, ConfigDict
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
-from app.core.security import verify_password, create_access_token
+from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.rbac import get_current_active_user
 from app.db.session import get_db
 from app.models.base import User, Role
@@ -15,6 +16,17 @@ router = APIRouter(prefix="/auth", tags=["Authentication & RBAC"])
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: str
+    role_id: str = "ROLE_CITIZEN"
+    designation: Optional[str] = None
+    phone_number: Optional[str] = None
+    state_id: Optional[str] = None
+    district_id: Optional[str] = None
 
 
 class UserProfileResponse(BaseModel):
@@ -78,6 +90,78 @@ class DemoUserResponse(BaseModel):
     role_id: str
     role_name: str
     description: str
+
+
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED, summary="Register New Statutory Account")
+async def register(
+    req: RegisterRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Creates a new user account with statutory role assignment and issues a signed JWT access token."""
+    clean_email = req.email.strip().lower()
+    clean_name = req.full_name.strip()
+
+    if len(req.password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters long."
+        )
+
+    if not clean_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Full name is required."
+        )
+
+    # Check if email is already taken
+    existing = await db.scalar(select(User).where(User.email == clean_email))
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"An account with email '{clean_email}' is already registered."
+        )
+
+    # Verify selected statutory role
+    role = await db.scalar(select(Role).where(Role.role_id == req.role_id))
+    if not role:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid statutory role '{req.role_id}'. Please select a valid role."
+        )
+
+    new_user = User(
+        user_id=f"USR-{uuid.uuid4().hex[:8].upper()}",
+        email=clean_email,
+        hashed_password=get_password_hash(req.password),
+        full_name=clean_name,
+        designation=req.designation.strip() if req.designation else None,
+        phone_number=req.phone_number.strip() if req.phone_number else None,
+        role_id=req.role_id,
+        state_id=req.state_id.strip() if req.state_id else None,
+        district_id=req.district_id.strip() if req.district_id else None,
+        is_active=True,
+    )
+    db.add(new_user)
+    await db.commit()
+    await db.refresh(new_user)
+
+    # Generate JWT with custom RBAC claims for immediate auto-login
+    token = create_access_token(
+        subject=new_user.user_id,
+        extra_claims={
+            "email": new_user.email,
+            "role": new_user.role_id,
+            "state_id": new_user.state_id,
+            "district_id": new_user.district_id,
+        }
+    )
+
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        expires_in_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+        user=UserProfileResponse.model_validate(new_user),
+    )
 
 
 @router.post("/login", response_model=TokenResponse, summary="Statutory Stakeholder Login")

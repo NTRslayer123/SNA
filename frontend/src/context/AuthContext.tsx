@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { UserProfileResponse } from '../types';
+import type { UserProfileResponse, RegisterPayload } from '../types';
 
 interface AuthContextType {
   user: UserProfileResponse | null;
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
+  register: (payload: RegisterPayload) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   quickSwitch: (email: string) => Promise<boolean>;
   hasRole: (allowedRoles: string[]) => boolean;
@@ -84,6 +85,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const register = async (payload: RegisterPayload): Promise<{ success: boolean; error?: string }> => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        setLoading(false);
+        return { success: false, error: errData.detail || 'Registration failed' };
+      }
+
+      const data = await res.json();
+      localStorage.setItem('nlams_token', data.access_token);
+      setToken(data.access_token);
+      setUser(data.user);
+      setLoading(false);
+      return { success: true };
+    } catch (err) {
+      console.error('Registration error:', err);
+      setLoading(false);
+      return { success: false, error: 'Network communication failure during registration' };
+    }
+  };
+
   const quickSwitch = async (email: string): Promise<boolean> => {
     return login(email, 'nlams@password2026');
   };
@@ -121,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, quickSwitch, hasRole, updateUser, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, quickSwitch, hasRole, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
