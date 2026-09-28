@@ -1,0 +1,114 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { UserProfileResponse } from '../types';
+
+interface AuthContextType {
+  user: UserProfileResponse | null;
+  token: string | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => void;
+  quickSwitch: (email: string) => Promise<boolean>;
+  hasRole: (allowedRoles: string[]) => boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<UserProfileResponse | null>(null);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('nlams_token'));
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Validate existing token on boot
+  useEffect(() => {
+    const fetchMe = async () => {
+      const storedToken = localStorage.getItem('nlams_token');
+      if (!storedToken) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/v1/auth/me', {
+          headers: {
+            Authorization: `Bearer ${storedToken}`,
+          },
+        });
+        if (res.ok) {
+          const userData = await res.json();
+          setUser(userData);
+          setToken(storedToken);
+        } else {
+          localStorage.removeItem('nlams_token');
+          setToken(null);
+          setUser(null);
+        }
+      } catch (err) {
+        console.error('Failed to validate token:', err);
+        localStorage.removeItem('nlams_token');
+        setToken(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMe();
+  }, []);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        setLoading(false);
+        return false;
+      }
+
+      const data = await res.json();
+      localStorage.setItem('nlams_token', data.access_token);
+      setToken(data.access_token);
+      setUser(data.user);
+      setLoading(false);
+      return true;
+    } catch (err) {
+      console.error('Login error:', err);
+      setLoading(false);
+      return false;
+    }
+  };
+
+  const quickSwitch = async (email: string): Promise<boolean> => {
+    return login(email, 'nlams@password2026');
+  };
+
+  const logout = () => {
+    localStorage.removeItem('nlams_token');
+    setToken(null);
+    setUser(null);
+  };
+
+  const hasRole = (allowedRoles: string[]): boolean => {
+    if (!user) return false;
+    if (user.role_id === 'ROLE_NATIONAL_ADMIN') return true; // Super admin has access
+    return allowedRoles.includes(user.role_id);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, token, loading, login, logout, quickSwitch, hasRole }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

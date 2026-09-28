@@ -11,7 +11,9 @@ import {
   FileCheck2,
   Sliders,
   ExternalLink,
+  ShieldAlert,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface SidebarProps {
   currentTab: string;
@@ -19,6 +21,8 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) => {
+  const { user } = useAuth();
+
   const navSections = [
     {
       title: 'LAYER 1: LAND ACQUISITION',
@@ -59,6 +63,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
       minHeight: 'calc(100vh - 74px)',
     }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+        {/* Active RBAC Role Scope Chip */}
+        {user && (
+          <div style={{
+            padding: '10px 12px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}>
+            <ShieldAlert size={16} color="var(--accent-cyan)" />
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>
+                Active Scope
+              </span>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {user.role_id.replace('ROLE_', '').replace('_', ' ')}
+              </span>
+            </div>
+          </div>
+        )}
+
         {navSections.map((section, idx) => (
           <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <span style={{

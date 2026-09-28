@@ -2,24 +2,30 @@ import React, { useState, useEffect } from 'react';
 import {
   FolderGit2,
   MapPin,
-  GitMerge,
   Share2,
   CheckCircle2,
   Activity,
+  UserCheck,
+  ShieldCheck,
+  X,
 } from 'lucide-react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { StatCard } from './components/StatCard';
 import { ArchitectureView } from './components/ArchitectureView';
+import { LoginPage } from './components/LoginPage';
 import type { HealthResponse, SystemInfo } from './types';
 
-export const App: React.FC = () => {
+const DashboardContent: React.FC = () => {
+  const { user } = useAuth();
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [activeLayer, setActiveLayer] = useState<'ALL' | 'LAYER_1' | 'LAYER_2'>('ALL');
   const [probeLatency, setProbeLatency] = useState<number | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
 
   const fetchDiagnostics = async () => {
     setLoading(true);
@@ -62,6 +68,7 @@ export const App: React.FC = () => {
         onRefresh={fetchDiagnostics}
         activeLayer={activeLayer}
         setActiveLayer={setActiveLayer}
+        onOpenLogin={() => setShowLoginModal(true)}
       />
 
       <div style={{ display: 'flex', flex: 1 }}>
@@ -70,14 +77,14 @@ export const App: React.FC = () => {
 
         {/* Main Content Viewport */}
         <main style={{ flex: 1, padding: '28px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
-          {/* Welcome & Context Banner */}
+          {/* Welcome & Context Banner with RBAC Identity */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>
                   National Land Acquisition Monitoring Dashboard
                 </h1>
-                <span className="badge badge-cyan">Week 1 Foundation</span>
+                <span className="badge badge-cyan">Week 2: Auth & RBAC</span>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                 Digitizing Land Acquisition under the RFCTLARR Act 2013 with Integrated Social Network Analytics (SNA).
@@ -85,17 +92,49 @@ export const App: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {/* Authenticated Stakeholder Identity Card */}
+              {user ? (
+                <div style={{
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-active)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '8px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}>
+                  <UserCheck size={18} color="var(--accent-emerald)" />
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {user.full_name}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--accent-cyan)' }}>
+                      {user.role_id.replace('ROLE_', '')} ({user.district_id || user.state_id || 'National'})
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '12px', padding: '8px 14px' }}
+                >
+                  <ShieldCheck size={15} color="var(--accent-cyan)" />
+                  Authenticate as Stakeholder
+                </button>
+              )}
+
               <div style={{
                 background: 'var(--bg-surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-md)',
-                padding: '8px 16px',
+                padding: '8px 14px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
               }}>
                 <Activity size={16} color="var(--accent-cyan)" />
-                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>API Latency:</span>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Latency:</span>
                 <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>
                   {probeLatency !== null ? `${probeLatency} ms` : 'Probing...'}
                 </span>
@@ -124,12 +163,12 @@ export const App: React.FC = () => {
               iconColor="var(--accent-blue)"
             />
             <StatCard
-              title="Statutory Workflow Actions"
-              value="10 Stages"
-              subtitle="Proposal ➔ Award ➔ Possession"
-              badge="Deterministic"
+              title="Statutory Stakeholders"
+              value="8 Roles"
+              subtitle="Central, State, District, Citizen"
+              badge="RBAC Active"
               badgeType="purple"
-              icon={GitMerge}
+              icon={ShieldCheck}
               iconColor="var(--accent-purple)"
             />
             <StatCard
@@ -157,7 +196,7 @@ export const App: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <CheckCircle2 size={18} color="var(--accent-emerald)" />
                 <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Live System Diagnostics & Persistence Handshake
+                  Live System Diagnostics & RBAC Security Handshake
                 </h3>
               </div>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
@@ -178,13 +217,13 @@ export const App: React.FC = () => {
               gap: '6px',
             }}>
               <div style={{ color: 'var(--accent-emerald)' }}>
-                [SUCCESS] FastAPI Gateway active on 127.0.0.1:8000 (version {health?.version || '1.0.0'})
+                [SECURITY] JWT Authenticator active with SHA-256 signatures & bcrypt hashing
               </div>
               <div style={{ color: 'var(--accent-cyan)' }}>
-                [DATABASE] Engine: {health?.database.engine.toUpperCase() || 'SQLITE'} | Status: {health?.database.status.toUpperCase()} | Health probe result: 1 (OK)
+                [RBAC] 8 Statutory Roles seeded: National Admin, State Officer, CALA Collector, LAO, Requiring Body, R&R, Surveyor, Citizen
               </div>
               <div style={{ color: 'var(--text-primary)' }}>
-                [SEED DATA] Demo State: Karnataka (KA) | District: Bengaluru Urban | Seed Project: Bengaluru-Mysuru Expressway
+                [DATABASE] Engine: {health?.database.engine.toUpperCase() || 'SQLITE'} | Status: {health?.database.status.toUpperCase()} | 8 demo accounts ready
               </div>
               <div style={{ color: 'var(--accent-purple)' }}>
                 [SNA FEEDS] Initial interaction logged: LAND_REQUIRING_BODY_NHAI ➔ DISTRICT_COLLECTOR_BENGALURU
@@ -193,7 +232,58 @@ export const App: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(7, 11, 20, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: '20px',
+        }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: '960px' }}>
+            <button
+              onClick={() => setShowLoginModal(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-muted)',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 10,
+              }}
+            >
+              <X size={18} />
+            </button>
+            <LoginPage onClose={() => setShowLoginModal(false)} />
+          </div>
+        </div>
+      )}
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <DashboardContent />
+    </AuthProvider>
   );
 };
 

@@ -35,3 +35,21 @@ export interface SystemInfo {
   statutory_act: string;
   timestamp: string;
 }
+
+export interface UserProfileResponse {
+  user_id: string;
+  email: string;
+  full_name: string;
+  role_id: string;
+  state_id: string | null;
+  district_id: string | null;
+  is_active: boolean;
+}
+
+export interface DemoUser {
+  email: string;
+  full_name: string;
+  role_id: string;
+  role_name: string;
+  description: string;
+}
