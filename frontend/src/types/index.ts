@@ -41,6 +41,8 @@ export interface UserProfileResponse {
   email: string;
   full_name: string;
   role_id: string;
+  designation?: string | null;
+  phone_number?: string | null;
   state_id: string | null;
   district_id: string | null;
   is_active: boolean;

@@ -12,6 +12,7 @@ import {
   Sliders,
   ExternalLink,
   ShieldAlert,
+  User,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -44,8 +45,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
       ],
     },
     {
-      title: 'GOVERNANCE & AUDIT',
+      title: 'STAKEHOLDER & GOVERNANCE',
       items: [
+        { id: 'profile', label: 'My Private Profile', icon: User, badge: user ? 'Active' : undefined },
         { id: 'documents', label: 'Statutory Documents', icon: FileCheck2 },
       ],
     },

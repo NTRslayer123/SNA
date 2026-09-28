@@ -1,5 +1,4 @@
-import React from 'react';
-import { RefreshCw, Layers, LogIn, LogOut } from 'lucide-react';
+import { RefreshCw, Layers, LogIn, LogOut, ArrowLeftRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import type { HealthResponse } from '../types';
 
@@ -10,6 +9,7 @@ interface HeaderProps {
   activeLayer: 'ALL' | 'LAYER_1' | 'LAYER_2';
   setActiveLayer: (layer: 'ALL' | 'LAYER_1' | 'LAYER_2') => void;
   onOpenLogin: () => void;
+  onOpenProfile?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeLayer,
   setActiveLayer,
   onOpenLogin,
+  onOpenProfile,
 }) => {
   const { user, logout } = useAuth();
   const isHealthy = health?.status === 'healthy' && health?.database?.status === 'connected';
@@ -191,9 +192,13 @@ export const Header: React.FC<HeaderProps> = ({
         {/* User Session Chip / Sign In Button */}
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Click to open My Profile */}
             <div
-              onClick={onOpenLogin}
-              title="Click to Switch Stakeholder Role"
+              onClick={() => {
+                if (onOpenProfile) onOpenProfile();
+                else onOpenLogin();
+              }}
+              title="Click to View & Edit Your Private Profile"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -203,7 +208,10 @@ export const Header: React.FC<HeaderProps> = ({
                 borderRadius: 'var(--radius-full)',
                 border: '1px solid var(--border-subtle)',
                 cursor: 'pointer',
+                transition: 'border-color 0.2s',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent-cyan)')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
             >
               <div style={{
                 width: '28px',
@@ -229,6 +237,35 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
+            {/* Quick Switch Role button */}
+            <button
+              onClick={onOpenLogin}
+              title="Switch Statutory Stakeholder Role"
+              style={{
+                background: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--text-secondary)',
+                padding: '7px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'color 0.15s, border-color 0.15s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--accent-cyan)';
+                e.currentTarget.style.borderColor = 'var(--accent-cyan)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-secondary)';
+                e.currentTarget.style.borderColor = 'var(--border-subtle)';
+              }}
+            >
+              <ArrowLeftRight size={14} />
+            </button>
+
+            {/* Sign Out Button */}
             <button
               onClick={logout}
               title="Sign Out"
@@ -242,9 +279,16 @@ export const Header: React.FC<HeaderProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                transition: 'color 0.15s, border-color 0.15s',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#EF4444';
+                e.currentTarget.style.borderColor = '#EF4444';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-muted)';
+                e.currentTarget.style.borderColor = 'var(--border-subtle)';
+              }}
             >
               <LogOut size={15} />
             </button>

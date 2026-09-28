@@ -9,6 +9,8 @@ interface AuthContextType {
   logout: () => void;
   quickSwitch: (email: string) => Promise<boolean>;
   hasRole: (allowedRoles: string[]) => boolean;
+  updateUser: (updatedUser: Partial<UserProfileResponse>) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,8 +100,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return allowedRoles.includes(user.role_id);
   };
 
+  const updateUser = (updatedUser: Partial<UserProfileResponse>) => {
+    setUser((prev) => (prev ? { ...prev, ...updatedUser } : null));
+  };
+
+  const refreshUser = async () => {
+    const storedToken = localStorage.getItem('nlams_token');
+    if (!storedToken) return;
+    try {
+      const res = await fetch('/api/v1/auth/me', {
+        headers: { Authorization: `Bearer ${storedToken}` },
+      });
+      if (res.ok) {
+        const userData = await res.json();
+        setUser(userData);
+      }
+    } catch (err) {
+      console.error('Failed to refresh user:', err);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, quickSwitch, hasRole }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, quickSwitch, hasRole, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

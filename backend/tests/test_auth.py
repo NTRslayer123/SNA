@@ -88,3 +88,42 @@ async def test_demo_users_endpoint():
         assert response.status_code == 200
         demo_users = response.json()
         assert len(demo_users) >= 8
+
+
+@pytest.mark.asyncio
+async def test_get_and_update_private_profile():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        # Login as National Admin
+        login_res = await ac.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "admin@nlams.gov.in",
+                "password": "nlams@password2026",
+            },
+        )
+        assert login_res.status_code == 200
+        token = login_res.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # 1. Fetch full private profile
+        prof_res = await ac.get("/api/v1/auth/profile", headers=headers)
+        assert prof_res.status_code == 200
+        pdata = prof_res.json()
+        assert pdata["email"] == "admin@nlams.gov.in"
+        assert pdata["role_id"] == "ROLE_NATIONAL_ADMIN"
+
+        # 2. Update profile name and phone number
+        update_res = await ac.put(
+            "/api/v1/auth/profile",
+            headers=headers,
+            json={
+                "full_name": "Dr. Rajeshwar Sharma, IAS (Updated)",
+                "phone_number": "+91 99887 76655",
+                "designation": "Joint Secretary, DoLR, MoRD",
+            },
+        )
+        assert update_res.status_code == 200
+        updated = update_res.json()
+        assert updated["full_name"] == "Dr. Rajeshwar Sharma, IAS (Updated)"
+        assert updated["phone_number"] == "+91 99887 76655"
+        assert updated["designation"] == "Joint Secretary, DoLR, MoRD"

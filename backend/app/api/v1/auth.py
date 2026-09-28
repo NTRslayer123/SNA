@@ -23,9 +23,37 @@ class UserProfileResponse(BaseModel):
     user_id: str
     email: str
     full_name: str
+    designation: Optional[str] = None
+    phone_number: Optional[str] = None
     role_id: str
-    state_id: Optional[str]
-    district_id: Optional[str]
+    state_id: Optional[str] = None
+    district_id: Optional[str] = None
+    is_active: bool
+
+
+class ProfileUpdateRequest(BaseModel):
+    full_name: Optional[str] = None
+    designation: Optional[str] = None
+    phone_number: Optional[str] = None
+    state_id: Optional[str] = None
+    district_id: Optional[str] = None
+    current_password: Optional[str] = None
+    new_password: Optional[str] = None
+
+
+class DetailedProfileResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: str
+    email: str
+    full_name: str
+    designation: Optional[str] = None
+    phone_number: Optional[str] = None
+    role_id: str
+    role_name: Optional[str] = None
+    role_description: Optional[str] = None
+    state_id: Optional[str] = None
+    district_id: Optional[str] = None
     is_active: bool
 
 
@@ -104,6 +132,86 @@ async def get_my_profile(
 ):
     """Retrieves profile and institutional role for the currently authenticated bearer token."""
     return UserProfileResponse.model_validate(current_user)
+
+
+@router.get("/profile", response_model=DetailedProfileResponse, summary="Get Full Private Profile")
+async def get_full_profile(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Returns detailed private profile including role description and contact details."""
+    role = await db.scalar(select(Role).where(Role.role_id == current_user.role_id))
+    return DetailedProfileResponse(
+        user_id=current_user.user_id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+        designation=current_user.designation or (role.role_name if role else ""),
+        phone_number=current_user.phone_number or "+91 98765 43210",
+        role_id=current_user.role_id,
+        role_name=role.role_name if role else current_user.role_id,
+        role_description=role.description if role else "",
+        state_id=current_user.state_id,
+        district_id=current_user.district_id,
+        is_active=current_user.is_active,
+    )
+
+
+@router.put("/profile", response_model=DetailedProfileResponse, summary="Update Private Profile & Password")
+async def update_profile(
+    update_data: ProfileUpdateRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Allows authenticated stakeholders to update personal details, designation, phone number, and password."""
+    # Update basic profile fields
+    if update_data.full_name is not None and update_data.full_name.strip():
+        current_user.full_name = update_data.full_name.strip()
+    if update_data.designation is not None:
+        current_user.designation = update_data.designation.strip()
+    if update_data.phone_number is not None:
+        current_user.phone_number = update_data.phone_number.strip()
+    if update_data.state_id is not None:
+        current_user.state_id = update_data.state_id.strip()
+    if update_data.district_id is not None:
+        current_user.district_id = update_data.district_id.strip()
+
+    # Password update
+    if update_data.new_password:
+        if not update_data.current_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is required to set a new password."
+            )
+        if not verify_password(update_data.current_password, current_user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password verification failed."
+            )
+        if len(update_data.new_password) < 6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must be at least 6 characters long."
+            )
+        from app.core.security import get_password_hash
+        current_user.hashed_password = get_password_hash(update_data.new_password)
+
+    await db.commit()
+    await db.refresh(current_user)
+
+    role = await db.scalar(select(Role).where(Role.role_id == current_user.role_id))
+    return DetailedProfileResponse(
+        user_id=current_user.user_id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+        designation=current_user.designation or (role.role_name if role else ""),
+        phone_number=current_user.phone_number or "+91 98765 43210",
+        role_id=current_user.role_id,
+        role_name=role.role_name if role else current_user.role_id,
+        role_description=role.description if role else "",
+        state_id=current_user.state_id,
+        district_id=current_user.district_id,
+        is_active=current_user.is_active,
+    )
 
 
 @router.get("/roles", response_model=List[RoleResponse], summary="List Institutional Roles")
