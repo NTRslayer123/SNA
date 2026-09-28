@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app.core.config import settings
 from app.db.base import Base
 from app.db.session import engine, AsyncSessionLocal
@@ -116,37 +116,187 @@ async def seed_initial_foundation():
                 ),
             ]
             session.add_all(demo_users)
+            await session.flush()
 
-            # Seed foundation Demo Project
-            demo_project = Project(
-                project_id="PRJ-NHAI-2026-001",
-                project_name="Bengaluru-Mysuru Expressway Expansion (Phase II)",
-                project_code="NHAI/KA/BNG-MYS/02",
-                category="Highway",
-                sponsoring_agency="National Highways Authority of India (NHAI)",
-                state_id="KA",
-                district_id="KA-BLRU",
-                estimated_cost_inr=1450000000.00,
-                total_area_hectares=342.50,
-                current_stage="STAGE_SEC11_NOTIF",
-                delay_risk_status="LOW"
-            )
-            session.add(demo_project)
+        # Seed additional reference States & Districts for multi-state synthetic infrastructure corridors
+        states_to_seed = [
+            ("KA", "Karnataka", "29"),
+            ("MH", "Maharashtra", "27"),
+            ("HR", "Haryana", "06"),
+            ("UP", "Uttar Pradesh", "09"),
+            ("TN", "Tamil Nadu", "33"),
+        ]
+        for st_id, st_name, st_code in states_to_seed:
+            exists = await session.get(State, st_id)
+            if not exists:
+                session.add(State(state_id=st_id, state_name=st_name, state_code=st_code))
+        await session.flush()
 
-            # Seed initial organic workflow event
-            initial_interaction = StakeholderInteraction(
-                project_id="PRJ-NHAI-2026-001",
-                source_stakeholder="LAND_REQUIRING_BODY_NHAI",
-                target_stakeholder="DISTRICT_COLLECTOR_BENGALURU",
-                interaction_type="REQUISITION_SUBMISSION",
-                workflow_stage="STAGE_PROPOSAL",
-                state="Karnataka",
-                district="Bengaluru Urban",
-                duration_hours=12.0
-            )
-            session.add(initial_interaction)
+        districts_to_seed = [
+            ("KA-BLRU", "KA", "Bengaluru Urban", "572"),
+            ("KA-TUM", "KA", "Tumakuru", "557"),
+            ("MH-MUM", "MH", "Mumbai Suburban", "518"),
+            ("MH-THN", "MH", "Thane", "517"),
+            ("HR-GGN", "HR", "Gurugram", "086"),
+            ("UP-LKO", "UP", "Lucknow", "157"),
+            ("TN-CHN", "TN", "Chennai", "603"),
+        ]
+        for dst_id, st_id, dst_name, c_code in districts_to_seed:
+            exists = await session.get(District, dst_id)
+            if not exists:
+                session.add(District(district_id=dst_id, state_id=st_id, district_name=dst_name, census_code=c_code))
+        await session.flush()
 
-            await session.commit()
+        # Synthetic Infrastructure Projects (Week 3 Requirement)
+        from datetime import datetime, timezone, timedelta
+        from app.models.base import ProjectMilestone
+        from app.api.v1.projects import generate_default_milestones
+
+        synthetic_projects = [
+            {
+                "project_id": "PRJ-NHAI-2026-001",
+                "project_name": "Bengaluru-Mysuru Expressway Expansion (Phase II)",
+                "project_code": "NHAI/KA/BNG-MYS/02",
+                "category": "Highway",
+                "sponsoring_agency": "National Highways Authority of India (NHAI)",
+                "state_id": "KA",
+                "district_id": "KA-BLRU",
+                "estimated_cost_inr": 14500000000.00,
+                "total_area_hectares": 342.50,
+                "current_stage": "STAGE_SEC11_NOTIF",
+                "delay_risk_status": "LOW",
+                "created_days_ago": 120,
+            },
+            {
+                "project_id": "PRJ-DFCC-2026-002",
+                "project_name": "Western Dedicated Freight Corridor (Vadodara-JNPT Feeder)",
+                "project_code": "DFCCIL/MH/WDFC-FEEDER/04",
+                "category": "Railway",
+                "sponsoring_agency": "Dedicated Freight Corridor Corporation (DFCCIL)",
+                "state_id": "MH",
+                "district_id": "MH-MUM",
+                "estimated_cost_inr": 38900000000.00,
+                "total_area_hectares": 520.80,
+                "current_stage": "STAGE_AWARD",
+                "delay_risk_status": "MEDIUM",
+                "created_days_ago": 280,
+            },
+            {
+                "project_id": "PRJ-NHAI-2026-003",
+                "project_name": "Delhi-Mumbai Expressway Greenfield Link (Sohna-Dausa Spur)",
+                "project_code": "NHAI/HR/DME-SPUR/01",
+                "category": "Highway",
+                "sponsoring_agency": "National Highways Authority of India (NHAI)",
+                "state_id": "HR",
+                "district_id": "HR-GGN",
+                "estimated_cost_inr": 56000000000.00,
+                "total_area_hectares": 780.20,
+                "current_stage": "STAGE_COMPENSATION",
+                "delay_risk_status": "LOW",
+                "created_days_ago": 340,
+            },
+            {
+                "project_id": "PRJ-NTPC-2026-004",
+                "project_name": "Ultra-Mega Solar Renewable Energy Park (Pavagada Expansion)",
+                "project_code": "NTPC/KA/SOLAR-PVG/03",
+                "category": "Energy",
+                "sponsoring_agency": "NTPC Renewable Energy Ltd",
+                "state_id": "KA",
+                "district_id": "KA-TUM",
+                "estimated_cost_inr": 24000000000.00,
+                "total_area_hectares": 1250.00,
+                "current_stage": "STAGE_POSSESSION",
+                "delay_risk_status": "LOW",
+                "created_days_ago": 410,
+            },
+            {
+                "project_id": "PRJ-BMRC-2026-005",
+                "project_name": "Bengaluru Namma Metro Airport Blue Line Corridor",
+                "project_code": "BMRCL/KA/METRO-BLUE/2B",
+                "category": "Urban Transit",
+                "sponsoring_agency": "Bangalore Metro Rail Corporation (BMRCL)",
+                "state_id": "KA",
+                "district_id": "KA-BLRU",
+                "estimated_cost_inr": 19800000000.00,
+                "total_area_hectares": 85.40,
+                "current_stage": "STAGE_RR_EXECUTION",
+                "delay_risk_status": "HIGH",
+                "created_days_ago": 490,
+            },
+            {
+                "project_id": "PRJ-UPEX-2026-006",
+                "project_name": "Ganga Expressway Strategic Corridor (Meerut-Prayagraj)",
+                "project_code": "UPEIDA/UP/GNGA-EXP/01",
+                "category": "Highway",
+                "sponsoring_agency": "State Public Works Department (PWD)",
+                "state_id": "UP",
+                "district_id": "UP-LKO",
+                "estimated_cost_inr": 92000000000.00,
+                "total_area_hectares": 1650.00,
+                "current_stage": "STAGE_SCRUTINY",
+                "delay_risk_status": "MEDIUM",
+                "created_days_ago": 45,
+            },
+        ]
+
+        now = datetime.now(timezone.utc)
+
+        for p_data in synthetic_projects:
+            existing_p = await session.get(Project, p_data["project_id"])
+            if not existing_p:
+                created_dt = now - timedelta(days=p_data["created_days_ago"])
+                p = Project(
+                    project_id=p_data["project_id"],
+                    project_name=p_data["project_name"],
+                    project_code=p_data["project_code"],
+                    category=p_data["category"],
+                    sponsoring_agency=p_data["sponsoring_agency"],
+                    state_id=p_data["state_id"],
+                    district_id=p_data["district_id"],
+                    estimated_cost_inr=p_data["estimated_cost_inr"],
+                    total_area_hectares=p_data["total_area_hectares"],
+                    current_stage=p_data["current_stage"],
+                    delay_risk_status=p_data["delay_risk_status"],
+                )
+                session.add(p)
+                await session.flush()
+
+                # Generate 10 statutory milestones
+                milestones = generate_default_milestones(
+                    p_data["project_id"],
+                    start_date=created_dt,
+                    current_stage=p_data["current_stage"]
+                )
+                session.add_all(milestones)
+
+                # Organic initial SNA event
+                inter = StakeholderInteraction(
+                    project_id=p_data["project_id"],
+                    source_stakeholder=p_data["sponsoring_agency"].replace(" ", "_").upper()[:50],
+                    target_stakeholder="DISTRICT_COLLECTOR_CALA",
+                    interaction_type="REQUISITION_SUBMISSION",
+                    workflow_stage="STAGE_PROPOSAL",
+                    state=p_data["state_id"],
+                    district=p_data["district_id"],
+                    duration_hours=18.0,
+                )
+                session.add(inter)
+            else:
+                # Check if existing project has milestones
+                ms_count = await session.scalar(
+                    select(func.count(ProjectMilestone.milestone_id)).where(ProjectMilestone.project_id == p_data["project_id"])
+                )
+                if not ms_count:
+                    created_dt = now - timedelta(days=p_data["created_days_ago"])
+                    milestones = generate_default_milestones(
+                        p_data["project_id"],
+                        start_date=created_dt,
+                        current_stage=existing_p.current_stage
+                    )
+                    session.add_all(milestones)
+
+        await session.commit()
+
 
 
 @asynccontextmanager

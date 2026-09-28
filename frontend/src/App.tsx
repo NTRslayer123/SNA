@@ -15,6 +15,7 @@ import { StatCard } from './components/StatCard';
 import { ArchitectureView } from './components/ArchitectureView';
 import { LoginPage } from './components/LoginPage';
 import { ProfilePage } from './components/ProfilePage';
+import { ProjectsView } from './components/ProjectsView';
 import type { HealthResponse, SystemInfo } from './types';
 
 const DashboardContent: React.FC = () => {
@@ -80,6 +81,11 @@ const DashboardContent: React.FC = () => {
         <main style={{ flex: 1, padding: '28px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
           {currentTab === 'profile' ? (
             <ProfilePage onOpenLogin={() => setShowLoginModal(true)} />
+          ) : currentTab === 'projects' ? (
+            <ProjectsView
+              onOpenGis={() => setCurrentTab('gis')}
+              onOpenWorkflow={() => setCurrentTab('workflow')}
+            />
           ) : (
             <>
               {/* Welcome & Context Banner with RBAC Identity */}
@@ -89,7 +95,7 @@ const DashboardContent: React.FC = () => {
                     <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>
                       National Land Acquisition Monitoring Dashboard
                     </h1>
-                    <span className="badge badge-cyan">Week 2: Auth & RBAC</span>
+                    <span className="badge badge-cyan">Week 3: Projects & Milestones</span>
                   </div>
                   <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                     Digitizing Land Acquisition under the RFCTLARR Act 2013 with Integrated Social Network Analytics (SNA).

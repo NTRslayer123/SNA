@@ -7,6 +7,7 @@ from sqlalchemy import (
     Boolean,
     Numeric,
     DateTime,
+    Integer,
     ForeignKey,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -63,7 +64,7 @@ class Project(Base, TimestampMixin):
     project_id: Mapped[str] = mapped_column(String(30), primary_key=True)
     project_name: Mapped[str] = mapped_column(String(255), nullable=False)
     project_code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    category: Mapped[str] = mapped_column(String(50), nullable=False)  # Highway, Railway, Energy, Urban
+    category: Mapped[str] = mapped_column(String(50), nullable=False)  # Highway, Railway, Energy, Urban, Port, Industrial
     sponsoring_agency: Mapped[str] = mapped_column(String(100), nullable=False)
     state_id: Mapped[Optional[str]] = mapped_column(String(10), ForeignKey("states.state_id"), nullable=True)
     district_id: Mapped[Optional[str]] = mapped_column(String(10), ForeignKey("districts.district_id"), nullable=True)
@@ -71,6 +72,32 @@ class Project(Base, TimestampMixin):
     total_area_hectares: Mapped[float] = mapped_column(Numeric(10, 4), default=0.0)
     current_stage: Mapped[str] = mapped_column(String(30), default="STAGE_PROPOSAL")
     delay_risk_status: Mapped[str] = mapped_column(String(20), default="LOW")
+
+    state: Mapped[Optional["State"]] = relationship("State")
+    district: Mapped[Optional["District"]] = relationship("District")
+    milestones: Mapped[list["ProjectMilestone"]] = relationship(
+        "ProjectMilestone",
+        back_populates="project",
+        cascade="all, delete-orphan",
+        order_by="ProjectMilestone.stage_order"
+    )
+
+
+class ProjectMilestone(Base, TimestampMixin):
+    __tablename__ = "project_milestones"
+
+    milestone_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(String(30), ForeignKey("projects.project_id"), nullable=False, index=True)
+    stage_id: Mapped[str] = mapped_column(String(40), nullable=False)
+    stage_order: Mapped[int] = mapped_column(Integer, default=1)
+    title: Mapped[str] = mapped_column(String(150), nullable=False)
+    statutory_sla_days: Mapped[int] = mapped_column(Integer, default=60)
+    target_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="PENDING")  # PENDING, IN_PROGRESS, COMPLETED, DELAYED
+    remarks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    project: Mapped["Project"] = relationship("Project", back_populates="milestones")
 
 
 class LandParcel(Base, TimestampMixin):

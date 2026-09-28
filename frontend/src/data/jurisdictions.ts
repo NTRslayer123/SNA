@@ -1024,6 +1024,10 @@ export const getDistrictsForState = (stateId: string): PresetDistrict[] => {
   return found ? found.districts : [];
 };
 
+export const getStateById = (stateId: string): PresetState | undefined => {
+  return PRESET_STATES.find((s) => s.state_id.toUpperCase() === stateId.toUpperCase());
+};
+
 export const getStateName = (stateId: string): string => {
   const found = PRESET_STATES.find((s) => s.state_id.toUpperCase() === stateId.toUpperCase());
   return found ? found.state_name : stateId;
@@ -1036,3 +1040,4 @@ export const getDistrictName = (districtId: string): string => {
   }
   return districtId;
 };
+
