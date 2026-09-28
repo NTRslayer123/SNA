@@ -464,7 +464,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onOpenLogin }) => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-                    State / Territory
+                    State / Union Territory
                   </label>
                   <select
                     value={stateId || 'KA'}
@@ -491,7 +491,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onOpenLogin }) => {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-                    Statutory District
+                    District
                   </label>
                   <select
                     value={districtId}

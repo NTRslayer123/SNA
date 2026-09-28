@@ -641,7 +641,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                  State / Territory <span style={{ color: '#EF4444' }}>*</span>
+                  State / Union Territory <span style={{ color: '#EF4444' }}>*</span>
                 </label>
                 <select
                   value={regState}
@@ -668,7 +668,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                  Statutory District <span style={{ color: '#EF4444' }}>*</span>
+                  District <span style={{ color: '#EF4444' }}>*</span>
                 </label>
                 <select
                   value={regDistrict}
