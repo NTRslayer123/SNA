@@ -1,0 +1,37 @@
+export interface HealthResponse {
+  status: 'healthy' | 'degraded' | 'error';
+  service: string;
+  version: string;
+  environment: string;
+  database: {
+    status: 'connected' | 'disconnected' | 'error';
+    engine: 'postgresql' | 'sqlite';
+    error: string | null;
+  };
+  statistics: {
+    projects: number;
+    parcels: number;
+    stakeholder_interactions: number;
+  };
+  timestamp: string;
+}
+
+export interface SystemInfo {
+  system: string;
+  department: string;
+  problem_statement_id: string;
+  layers: {
+    layer_1_land_acquisition: {
+      name: string;
+      status: string;
+      subsystems: string[];
+    };
+    layer_2_sna: {
+      name: string;
+      status: string;
+      subsystems: string[];
+    };
+  };
+  statutory_act: string;
+  timestamp: string;
+}
