@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import type { DemoUser, StatutoryRole } from '../types';
+import { PRESET_STATES, getDistrictsForState } from '../data/jurisdictions';
 
 interface LoginPageProps {
   onClose?: () => void;
@@ -32,14 +33,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
   const [demoUsers, setDemoUsers] = useState<DemoUser[]>([]);
   const [roles, setRoles] = useState<StatutoryRole[]>([]);
 
-  // Registration form states
+  // Registration form states with presets
   const [regFullName, setRegFullName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regRole, setRegRole] = useState('ROLE_CITIZEN');
   const [regDesignation, setRegDesignation] = useState('');
   const [regPhone, setRegPhone] = useState('');
-  const [regState, setRegState] = useState('');
-  const [regDistrict, setRegDistrict] = useState('');
+  const [regState, setRegState] = useState('KA');
+  const [regDistrict, setRegDistrict] = useState('KA-BLRU');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
 
@@ -116,6 +117,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
       }, 700);
     } else {
       setError(res.error || 'Registration failed.');
+    }
+  };
+
+  const handleStateChange = (newState: string) => {
+    setRegState(newState);
+    const districts = getDistrictsForState(newState);
+    if (districts.length > 0) {
+      setRegDistrict(districts[0].district_id);
+    } else {
+      setRegDistrict('');
     }
   };
 
@@ -626,17 +637,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
               </div>
             </div>
 
-            {/* State & District */}
+            {/* Preset State & District Cascading Selectors */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                  State Code
+                  State / Territory <span style={{ color: '#EF4444' }}>*</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g. KA, MH"
+                <select
                   value={regState}
-                  onChange={(e) => setRegState(e.target.value.toUpperCase())}
+                  onChange={(e) => handleStateChange(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '6px 10px',
@@ -644,21 +653,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
                     border: '1px solid var(--border-subtle)',
                     background: 'var(--bg-surface)',
                     color: 'var(--text-primary)',
-                    fontFamily: 'var(--font-mono)',
+                    fontFamily: 'var(--font-body)',
                     fontSize: '12px',
                     outline: 'none',
                   }}
-                />
+                >
+                  {PRESET_STATES.map((st) => (
+                    <option key={st.state_id} value={st.state_id} style={{ background: '#0F172A', color: '#FFFFFF' }}>
+                      {st.state_name} ({st.state_id})
+                    </option>
+                  ))}
+                </select>
               </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                  District Code
+                  Statutory District <span style={{ color: '#EF4444' }}>*</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g. BENGALURU"
+                <select
                   value={regDistrict}
-                  onChange={(e) => setRegDistrict(e.target.value.toUpperCase())}
+                  onChange={(e) => setRegDistrict(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '6px 10px',
@@ -666,11 +680,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
                     border: '1px solid var(--border-subtle)',
                     background: 'var(--bg-surface)',
                     color: 'var(--text-primary)',
-                    fontFamily: 'var(--font-mono)',
+                    fontFamily: 'var(--font-body)',
                     fontSize: '12px',
                     outline: 'none',
                   }}
-                />
+                >
+                  {getDistrictsForState(regState).map((dst) => (
+                    <option key={dst.district_id} value={dst.district_id} style={{ background: '#0F172A', color: '#FFFFFF' }}>
+                      {dst.district_name} ({dst.district_id})
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 

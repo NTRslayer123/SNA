@@ -14,6 +14,7 @@ import {
   LogIn,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { PRESET_STATES, getDistrictsForState, getStateName, getDistrictName } from '../data/jurisdictions';
 
 interface ProfilePageProps {
   onOpenLogin?: () => void;
@@ -61,6 +62,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onOpenLogin }) => {
       console.error('Failed to load profile:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleProfileStateChange = (newState: string) => {
+    setStateId(newState);
+    const districts = getDistrictsForState(newState);
+    if (districts.length > 0) {
+      setDistrictId(districts[0].district_id);
+    } else {
+      setDistrictId('');
     }
   };
 
@@ -250,7 +261,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onOpenLogin }) => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span className="badge badge-cyan">{user.role_id}</span>
-          <span className="badge badge-purple">{districtId || stateId || 'National Jurisdiction'}</span>
+          <span className="badge badge-purple">{getDistrictName(districtId) || getStateName(stateId) || 'National Jurisdiction'}</span>
         </div>
       </div>
 
@@ -449,15 +460,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onOpenLogin }) => {
                 </div>
               </div>
 
+              {/* Preset State & District Selectors */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-                    State Code
+                    State / Territory
                   </label>
-                  <input
-                    type="text"
-                    value={stateId}
-                    onChange={(e) => setStateId(e.target.value)}
+                  <select
+                    value={stateId || 'KA'}
+                    onChange={(e) => handleProfileStateChange(e.target.value)}
                     style={{
                       width: '100%',
                       padding: '9px 12px',
@@ -465,18 +476,24 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onOpenLogin }) => {
                       border: '1px solid var(--border-subtle)',
                       background: 'var(--bg-surface-elevated)',
                       color: 'var(--text-primary)',
-                      fontFamily: 'var(--font-mono)',
+                      fontFamily: 'var(--font-body)',
                       fontSize: '13px',
                       outline: 'none',
                     }}
-                  />
+                  >
+                    {PRESET_STATES.map((st) => (
+                      <option key={st.state_id} value={st.state_id} style={{ background: '#0F172A', color: '#FFFFFF' }}>
+                        {st.state_name} ({st.state_id})
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-                    District Code
+                    Statutory District
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={districtId}
                     onChange={(e) => setDistrictId(e.target.value)}
                     style={{
@@ -486,11 +503,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onOpenLogin }) => {
                       border: '1px solid var(--border-subtle)',
                       background: 'var(--bg-surface-elevated)',
                       color: 'var(--text-primary)',
-                      fontFamily: 'var(--font-mono)',
+                      fontFamily: 'var(--font-body)',
                       fontSize: '13px',
                       outline: 'none',
                     }}
-                  />
+                  >
+                    {getDistrictsForState(stateId || 'KA').map((dst) => (
+                      <option key={dst.district_id} value={dst.district_id} style={{ background: '#0F172A', color: '#FFFFFF' }}>
+                        {dst.district_name} ({dst.district_id})
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
